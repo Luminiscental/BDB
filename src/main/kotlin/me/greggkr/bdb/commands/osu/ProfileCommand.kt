@@ -1,6 +1,5 @@
 package me.greggkr.bdb.commands.osu
 
-import com.oopsjpeg.osu4j.GameMode
 import com.oopsjpeg.osu4j.backend.EndpointUserBests
 import me.diax.comportment.jdacommand.Command
 import me.diax.comportment.jdacommand.CommandDescription

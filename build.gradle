@@ -58,7 +58,7 @@ dependencies {
 
     compile 'com.github.FredBoat:Lavalink-Client:125b074'
 
-    compile 'com.github.Luminiscental:osu4j:b27b8fd'
+    compile 'com.github.Luminiscental:osu4j:gamemodeSupport-SNAPSHOT'
     compile 'com.github.francesco149:koohii:1.0.15'
     compile 'com.github.gdaniel:beatmap-analyzer:40b8a8e'
 

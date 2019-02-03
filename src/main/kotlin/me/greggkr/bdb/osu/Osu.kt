@@ -53,11 +53,11 @@ enum class OsuMod(val mod: String) {
     FL("FL")
 }
 
-enum class OsuMode(val modeArg: String, val gamemode: GameMode) {
-    STD("std", GameMode.STANDARD),
-    TAIKO("taiko", GameMode.TAIKO),
-    MANIA("mania", GameMode.MANIA),
-    CTB("ctb", GameMode.CATCH_THE_BEAT);
+enum class OsuMode(val modeArg: String, val prettyName: String, val gamemode: GameMode) {
+    STD("std", "osu!", GameMode.STANDARD),
+    TAIKO("taiko", "osu!taiko", GameMode.TAIKO),
+    MANIA("mania", "osu!mania", GameMode.MANIA),
+    CTB("ctb", "osu!ctb", GameMode.CATCH_THE_BEAT);
 
     companion object {
         fun fromArg(modeArg: String): OsuMode {

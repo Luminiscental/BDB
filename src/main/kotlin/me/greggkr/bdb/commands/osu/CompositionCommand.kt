@@ -46,7 +46,7 @@ class CompositionCommand : Command {
 
         channel.sendMessage(EmbedBuilder()
                 .setColor(data.getColor(guild))
-                .setTitle("PP Composition for $user ($limit plays)")
+                .setTitle(p.mode.prettyName + " PP Composition for $user ($limit plays)")
                 .setDescription("That user's top $limit plays make up ${percentFormat.format(weightedPP / userPP)} of their total pp.")
                 .addInlineField("PP", "Top $limit: ${ppFormat.format(weightedPP)}\n" +
                         "Total PP: ${ppFormat.format(userPP)}")

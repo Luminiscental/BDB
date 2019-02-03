@@ -8,7 +8,9 @@ import me.diax.comportment.jdacommand.CommandDescription
 import me.greggkr.bdb.*
 import me.greggkr.bdb.analysis.Analytics
 import me.greggkr.bdb.analysis.analyse
+import me.greggkr.bdb.analysis.getTaikoAcc
 import me.greggkr.bdb.osu.Osu
+import me.greggkr.bdb.osu.OsuMode
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
 import net.dv8tion.jda.core.entities.MessageEmbed
@@ -30,6 +32,11 @@ class RecentBestCommand : Command {
         val user = p.user ?: return
         val amount = Osu.getNumberArgument(p.params, 1, 1, 10)
 
+        if (p.mode != OsuMode.STD && p.mode != OsuMode.TAIKO) {
+            channel.sendMessage("Only std/taiko are supported atm sorry.").queue()
+            return
+        }
+
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(user)
                 .setMode(p.mode.gamemode)
                 .setLimit(100)
@@ -44,21 +51,42 @@ class RecentBestCommand : Command {
             best
         }
 
-        val fields = recentBest
-                .map { ScoreInfo(analyse(it.beatmapID, it.maxCombo, it.hit300, it.hit100, it.hit50, it.misses, it.enabledMods), !it.rank.contains("F"), it)}
-                .filter { it.complete }
-                .map {
-                    val map = it.score.beatmap.get()
-                    val rank = Osu.prettyRank(it.score.rank)
-                    val comboInfo = "${it.score.maxCombo}x/${map.maxCombo}x"
-                    val hitInfo = "${it.score.hit300}/${it.score.hit100}/${it.score.hit50}/${it.score.misses}"
-                    val playTitle = Osu.playTitle(it.score)
+        val fields = if (p.mode == OsuMode.STD) {
+            recentBest
+                    .map { ScoreInfo(analyse(it.beatmapID, it.maxCombo, it.hit300, it.hit100, it.hit50, it.misses, it.enabledMods), !it.rank.contains("F"), it) }
+                    .filter { it.complete }
+                    .map {
+                        val map = it.score.beatmap.get()
+                        val rank = Osu.prettyRank(it.score.rank)
+                        val pp = it.pp.performance
+                        val acc = it.pp.accuracy
 
-                    val title = "$rank | $playTitle"
-                    val content = "${ppFormat.format(it.pp.performance)} | ${accuracyFormat.format(it.pp.accuracy)}, $comboInfo, $hitInfo"
+                        val comboInfo = "${it.score.maxCombo}x/${map.maxCombo}x"
+                        val hitInfo = "${it.score.hit300}/${it.score.hit100}/${it.score.hit50}/${it.score.misses}"
+                        val playTitle = Osu.playTitle(it.score)
 
-                    MessageEmbed.Field(title, content, false)
-                }
+                        val title = "$rank | $playTitle"
+                        val content = "${ppFormat.format(pp)} | ${accuracyFormat.format(acc)}, $comboInfo, $hitInfo"
+
+                        MessageEmbed.Field(title, content, false)
+                    }
+        } else {
+            recentBest
+                    .map {
+                        val rank = Osu.prettyRank(it.rank)
+                        val pp = it.pp
+                        val acc = getTaikoAcc(it.gekis, it.katus, it.misses)
+
+                        val playTitle = Osu.playTitle(it)
+                        val comboInfo = "${it.maxCombo}x"
+                        val hitInfo = "${it.gekis}/${it.katus}/${it.misses}"
+
+                        val title = "$rank | $playTitle"
+                        val content = "${ppFormat.format(pp)} | ${accuracyFormat.format(acc)}, $comboInfo, $hitInfo"
+
+                        MessageEmbed.Field(title, content, false)
+                    }
+        }
 
         val builder = EmbedBuilder()
                 .setColor(data.getColor(guild))

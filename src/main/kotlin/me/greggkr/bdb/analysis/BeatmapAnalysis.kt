@@ -37,7 +37,35 @@ data class Score(val id: Int,
                  val n50: Int,
                  val nMiss: Int,
                  val mods: Array<GameMod>
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Score
+
+        if (id != other.id) return false
+        if (maxCombo != other.maxCombo) return false
+        if (n300 != other.n300) return false
+        if (n100 != other.n100) return false
+        if (n50 != other.n50) return false
+        if (nMiss != other.nMiss) return false
+        if (!mods.contentEquals(other.mods)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id
+        result = 31 * result + maxCombo
+        result = 31 * result + n300
+        result = 31 * result + n100
+        result = 31 * result + n50
+        result = 31 * result + nMiss
+        result = 31 * result + mods.contentHashCode()
+        return result
+    }
+}
 
 val bmCacheFolder = File("bm_cache/")
 //fun analyse(score: Score): Koohii.PPv2? {
@@ -67,7 +95,13 @@ fun getAcc(n300: Int,
            nMiss: Int): Double {
     val hitCount = n300 + n100 + n50 + nMiss
     if (hitCount == 0) return hitCount.toDouble()
-    return (6.0 * n300 + 2.0 * n100 + n50) / (6.0 * hitCount)
+    return (6 * n300 + 2 * n100 + n50).toDouble() / (6 * hitCount).toDouble()
+}
+
+fun getTaikoAcc(nGeki: Int,
+                nKatu: Int,
+                nMiss: Int): Double {
+    return (0.5 * nKatu + nGeki) / (nGeki + nKatu + nMiss).toDouble()
 }
 
 fun getStrain(strain: Double): Double {
