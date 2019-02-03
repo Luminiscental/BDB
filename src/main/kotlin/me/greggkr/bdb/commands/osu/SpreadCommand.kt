@@ -26,7 +26,7 @@ class SpreadCommand : Command {
         val limit = Osu.getNumberArgument(p.params, 50, 10, 100)
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(user)
-                .setMode(GameMode.STANDARD)
+                .setMode(p.mode.gamemode)
                 .setLimit(limit)
                 .build())
                 .resolve()

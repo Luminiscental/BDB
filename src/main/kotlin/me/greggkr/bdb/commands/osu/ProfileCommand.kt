@@ -25,7 +25,7 @@ class ProfileCommand : Command {
         val inputUser = p.user ?: return
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(inputUser)
-                .setMode(GameMode.STANDARD)
+                .setMode(p.mode.gamemode)
                 .setLimit(10)
                 .build())
                 .resolve()

@@ -22,6 +22,7 @@ class RecentCommand : Command {
         val user = p.user ?: return
 
         val recent = osu.userRecents.getAsQuery(EndpointUserRecents.ArgumentsBuilder(user)
+                .setMode(p.mode.gamemode)
                 .setLimit(1)
                 .build())
                 .resolve()

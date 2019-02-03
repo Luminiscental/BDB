@@ -3,12 +3,14 @@ package me.greggkr.bdb.osu
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.oopsjpeg.osu4j.GameMod
+import com.oopsjpeg.osu4j.GameMode
 import com.oopsjpeg.osu4j.OsuScore
 import me.greggkr.bdb.config
 import me.greggkr.bdb.data
 import me.greggkr.bdb.starFormat
 import me.greggkr.bdb.util.Config
 import me.greggkr.bdb.util.Emoji
+import net.dv8tion.jda.core.entities.Game
 import net.dv8tion.jda.core.entities.Message
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -37,16 +39,12 @@ enum class UserType(val apiName: String) {
     ID("id"), USERNAME("string")
 }
 
-data class OsuUserArguments(val user: String?,
-                            val params: List<String>
-)
-
 enum class OsuMod(val mod: String) {
     SO("SO"),
     EZ("EZ"),
     HT("HT"),
     HD("HD"),
-    NC("NC"),
+    NC("HC"),
     DT("DT"),
     HR("HR"),
     NF("NF"),
@@ -54,6 +52,30 @@ enum class OsuMod(val mod: String) {
     PF("PF"),
     FL("FL")
 }
+
+enum class OsuMode(val modeArg: String, val gamemode: GameMode) {
+    STD("std", GameMode.STANDARD),
+    TAIKO("taiko", GameMode.TAIKO),
+    MANIA("mania", GameMode.MANIA),
+    CTB("ctb", GameMode.CATCH_THE_BEAT);
+
+    companion object {
+        fun fromArg(modeArg: String): OsuMode {
+            return values().last { it.modeArg == modeArg }
+        }
+        fun isMode(modeArg: String): Boolean {
+            return values().map { it.modeArg }.contains(modeArg)
+        }
+    }
+}
+
+data class OsuUserArguments(val user: String?,
+                            val mode: OsuMode,
+                            val params: List<String>
+)
+
+data class OsuGlobalArguments(val mode: OsuMode,
+                              val params: List<String>)
 
 class Osu {
     companion object {
@@ -126,7 +148,7 @@ class Osu {
                         }
                     }
                     // If it's a number assume it's a parameter not a username
-                    if (!specifiedUser && !a[0].matches(Regex("\\d+"))) {
+                    if (!specifiedUser && !a[0].matches(Regex("\\d+")) && !OsuMode.isMode(a[0])) {
                         user = a[0]
                         specifiedUser = true
                     }
@@ -151,7 +173,37 @@ class Osu {
                 a
             }
 
-            return OsuUserArguments(user, p)
+            val asGlobal = getGlobalArguments(p.joinToString(separator = "|"))
+
+            return OsuUserArguments(user, asGlobal.mode, asGlobal.params)
+        }
+
+        fun getGlobalArguments(args: String): OsuGlobalArguments {
+
+            val a = args.split(Regex("\\s+\\|\\s+"))
+
+            // TODO: Per-user default mode
+            var mode = OsuMode.STD
+            var specifiedMode = false
+
+            if (!a.isNullOrEmpty()) {
+                if (!a[0].isEmpty()) {
+                    val modeArg = a[0]
+                    if (OsuMode.isMode(modeArg)) {
+                        specifiedMode = true
+                        mode = OsuMode.fromArg(modeArg)
+                    }
+                }
+            }
+
+            val p = if (specifiedMode) {
+                if (a.size < 2) listOf()
+                else a.subList(1, a.size)
+            } else {
+                a
+            }
+
+            return OsuGlobalArguments(mode, p)
         }
 
         fun getNumberArgument(params: List<String>, default: Int, min: Int, max: Int, index: Int = 0): Int {

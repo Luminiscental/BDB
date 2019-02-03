@@ -31,7 +31,7 @@ class RecentBestCommand : Command {
         val amount = Osu.getNumberArgument(p.params, 1, 1, 10)
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(user)
-                .setMode(GameMode.STANDARD)
+                .setMode(p.mode.gamemode)
                 .setLimit(100)
                 .build())
                 .resolve()

@@ -6,6 +6,7 @@ import me.diax.comportment.jdacommand.Command
 import me.diax.comportment.jdacommand.CommandDescription
 import me.greggkr.bdb.data
 import me.greggkr.bdb.osu
+import me.greggkr.bdb.osu.Osu
 import me.greggkr.bdb.util.Emoji
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
@@ -17,6 +18,7 @@ class TopAccCommand : Command {
     override fun execute(message: Message, args: String) {
         val guild = message.guild
         val channel = message.channel
+        val p = Osu.getGlobalArguments(args)
 
 //        val usernames = message.guild.members
 //                .asSequence()
@@ -38,7 +40,7 @@ class TopAccCommand : Command {
                 .asSequence()
                 .map {
                     osu.users.getAsQuery(EndpointUsers.ArgumentsBuilder(it)
-                            .setMode(GameMode.STANDARD)
+                            .setMode(p.mode.gamemode)
                             .build())
                             .resolve()
                 }

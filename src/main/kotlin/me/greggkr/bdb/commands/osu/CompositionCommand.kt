@@ -29,7 +29,7 @@ class CompositionCommand : Command {
         val limit = Osu.getNumberArgument(p.params, 10, 1, 100, 0)
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(user)
-                .setMode(GameMode.STANDARD)
+                .setMode(p.mode.gamemode)
                 .setLimit(limit)
                 .build())
                 .resolve()
