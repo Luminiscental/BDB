@@ -1,6 +1,5 @@
 package me.greggkr.bdb.commands.osu
 
-import com.oopsjpeg.osu4j.GameMode
 import com.oopsjpeg.osu4j.backend.EndpointUserBests
 import com.oopsjpeg.osu4j.backend.EndpointUsers
 import me.diax.comportment.jdacommand.Command
@@ -9,6 +8,7 @@ import me.greggkr.bdb.data
 import me.greggkr.bdb.osu
 import me.greggkr.bdb.osu.Osu
 import me.greggkr.bdb.util.Emoji
+import me.greggkr.bdb.util.argsFromString
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
 
@@ -19,7 +19,7 @@ class TopPlaysCommand : Command {
     override fun execute(message: Message, args: String) {
         val guild = message.guild
         val channel = message.channel
-        val p = Osu.getGlobalArguments(args)
+        val p = Osu.getUserAndMode(message, argsFromString(args), false)
 
 //        val usernames = message.guild.members
 //                .asSequence()
@@ -42,7 +42,7 @@ class TopPlaysCommand : Command {
                 .asSequence()
                 .map {
                     osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(it)
-                            .setMode(p.mode.gamemode)
+                            .setMode(p.mode)
                             .setLimit(1)
                             .build())
                             .resolve()
@@ -52,7 +52,7 @@ class TopPlaysCommand : Command {
 
         val embed = EmbedBuilder()
                 .setColor(data.getColor(guild))
-                .setTitle("Top plays in ${guild.name}")
+                .setTitle("Top plays in ${guild.name} for ${Osu.prettyMode(p.mode)}")
         for (play in topPlays) {
             val user = play.user.get()
             embed

@@ -1,6 +1,5 @@
 package me.greggkr.bdb.commands.osu
 
-import com.oopsjpeg.osu4j.GameMode
 import com.oopsjpeg.osu4j.backend.EndpointUsers
 import me.diax.comportment.jdacommand.Command
 import me.diax.comportment.jdacommand.CommandDescription
@@ -8,6 +7,7 @@ import me.greggkr.bdb.data
 import me.greggkr.bdb.osu
 import me.greggkr.bdb.osu.Osu
 import me.greggkr.bdb.util.Emoji
+import me.greggkr.bdb.util.argsFromString
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
 
@@ -18,7 +18,7 @@ class TopAccCommand : Command {
     override fun execute(message: Message, args: String) {
         val guild = message.guild
         val channel = message.channel
-        val p = Osu.getGlobalArguments(args)
+        val p = Osu.getUserAndMode(message, argsFromString(args), false)
 
 //        val usernames = message.guild.members
 //                .asSequence()
@@ -40,7 +40,7 @@ class TopAccCommand : Command {
                 .asSequence()
                 .map {
                     osu.users.getAsQuery(EndpointUsers.ArgumentsBuilder(it)
-                            .setMode(p.mode.gamemode)
+                            .setMode(p.mode)
                             .build())
                             .resolve()
                 }
@@ -48,7 +48,7 @@ class TopAccCommand : Command {
 
         val embed = EmbedBuilder()
                 .setColor(data.getColor(guild))
-                .setTitle("Top accuracies in ${guild.name}")
+                .setTitle("Top accuracies in ${guild.name} for ${Osu.prettyMode(p.mode)}")
 
         for (user in users) {
             embed

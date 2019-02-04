@@ -1,6 +1,5 @@
 package me.greggkr.bdb.commands.osu
 
-import com.oopsjpeg.osu4j.GameMode
 import com.oopsjpeg.osu4j.backend.EndpointUserBests
 import me.diax.comportment.jdacommand.Command
 import me.diax.comportment.jdacommand.CommandDescription
@@ -9,12 +8,10 @@ import me.greggkr.bdb.osu
 import me.greggkr.bdb.osu.Osu
 import me.greggkr.bdb.percentFormat
 import me.greggkr.bdb.ppFormat
-import me.greggkr.bdb.util.Emoji
 import me.greggkr.bdb.util.addInlineField
+import me.greggkr.bdb.util.argsFromString
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
-import java.lang.StringBuilder
-import kotlin.math.max
 
 @CommandDescription(name = "composition", triggers = [
     "composition"
@@ -23,13 +20,13 @@ class CompositionCommand : Command {
     override fun execute(message: Message, args: String) {
         val guild = message.guild
         val channel = message.channel
-        val p = Osu.getUserArguments(message, args)
+        val p = Osu.getUserAndMode(message, argsFromString(args))
 
         val user = p.user ?: return
         val limit = Osu.getNumberArgument(p.params, 10, 1, 100, 0)
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(user)
-                .setMode(p.mode.gamemode)
+                .setMode(p.mode)
                 .setLimit(limit)
                 .build())
                 .resolve()
@@ -46,7 +43,7 @@ class CompositionCommand : Command {
 
         channel.sendMessage(EmbedBuilder()
                 .setColor(data.getColor(guild))
-                .setTitle(p.mode.prettyName + " PP Composition for $user ($limit plays)")
+                .setTitle(Osu.prettyMode(p.mode) + " PP Composition for $user ($limit plays)")
                 .setDescription("That user's top $limit plays make up ${percentFormat.format(weightedPP / userPP)} of their total pp.")
                 .addInlineField("PP", "Top $limit: ${ppFormat.format(weightedPP)}\n" +
                         "Total PP: ${ppFormat.format(userPP)}")

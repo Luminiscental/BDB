@@ -10,7 +10,8 @@ import me.greggkr.bdb.analysis.Analytics
 import me.greggkr.bdb.analysis.analyse
 import me.greggkr.bdb.analysis.getTaikoAcc
 import me.greggkr.bdb.osu.Osu
-import me.greggkr.bdb.osu.OsuMode
+import me.greggkr.bdb.util.Emoji
+import me.greggkr.bdb.util.argsFromString
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
 import net.dv8tion.jda.core.entities.MessageEmbed
@@ -27,21 +28,26 @@ class RecentBestCommand : Command {
     override fun execute(message: Message, args: String) {
         val guild = message.guild
         val channel = message.channel
-        val p = Osu.getUserArguments(message, args)
+        val p = Osu.getUserAndMode(message, argsFromString(args))
 
         val user = p.user ?: return
         val amount = Osu.getNumberArgument(p.params, 1, 1, 10)
 
-        if (p.mode != OsuMode.STD && p.mode != OsuMode.TAIKO) {
+        if (p.mode != GameMode.STANDARD && p.mode != GameMode.TAIKO) {
             channel.sendMessage("Only std/taiko are supported atm sorry.").queue()
             return
         }
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(user)
-                .setMode(p.mode.gamemode)
+                .setMode(p.mode)
                 .setLimit(100)
                 .build())
                 .resolve()
+
+        if (best.isNullOrEmpty()) {
+            channel.sendMessage("${Emoji.X} Please provide a valid user; $user has no best plays in ${Osu.prettyMode(p.mode)}").queue()
+            return
+        }
 
         best.sortByDescending { it.date }
 
@@ -51,7 +57,7 @@ class RecentBestCommand : Command {
             best
         }
 
-        val fields = if (p.mode == OsuMode.STD) {
+        val fields = if (p.mode == GameMode.STANDARD) {
             recentBest
                     .map { ScoreInfo(analyse(it.beatmapID, it.maxCombo, it.hit300, it.hit100, it.hit50, it.misses, it.enabledMods), !it.rank.contains("F"), it) }
                     .filter { it.complete }
@@ -90,7 +96,7 @@ class RecentBestCommand : Command {
 
         val builder = EmbedBuilder()
                 .setColor(data.getColor(guild))
-                .setTitle("Best recent plays for $user")
+                .setTitle("Best recent plays for $user in ${Osu.prettyMode(p.mode)}")
 
         fields.forEach { builder.addField(it) }
 

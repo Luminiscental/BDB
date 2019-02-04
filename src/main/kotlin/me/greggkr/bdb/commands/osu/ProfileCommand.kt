@@ -1,14 +1,18 @@
 package me.greggkr.bdb.commands.osu
 
+import com.oopsjpeg.osu4j.GameMode
 import com.oopsjpeg.osu4j.backend.EndpointUserBests
 import me.diax.comportment.jdacommand.Command
 import me.diax.comportment.jdacommand.CommandDescription
 import me.greggkr.bdb.accuracyFormat
 import me.greggkr.bdb.analysis.getAcc
+import me.greggkr.bdb.analysis.getTaikoAcc
 import me.greggkr.bdb.data
 import me.greggkr.bdb.osu
 import me.greggkr.bdb.osu.Osu
 import me.greggkr.bdb.ppFormat
+import me.greggkr.bdb.util.Emoji
+import me.greggkr.bdb.util.argsFromString
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
 
@@ -19,22 +23,38 @@ class ProfileCommand : Command {
     override fun execute(message: Message, args: String) {
         val guild = message.guild
         val channel = message.channel
-        val p = Osu.getUserArguments(message, args)
+        val p = Osu.getUserAndMode(message, argsFromString(args))
 
         val inputUser = p.user ?: return
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(inputUser)
-                .setMode(p.mode.gamemode)
+                .setMode(p.mode)
                 .setLimit(10)
                 .build())
                 .resolve()
+
+        if (best.isNullOrEmpty()) {
+            channel.sendMessage("${Emoji.X} Please provide a valid user; $inputUser has no best plays in ${Osu.prettyMode(p.mode)}").queue()
+            return
+        }
 
         val pps = best.map { it.pp }
         val ranks = best.map { Osu.prettyRank(it.rank) }
         val mods = best.map { Osu.prettyMods(it.enabledMods)}
 
-        val accuracies = best.map {
-            getAcc(it.hit300, it.hit100, it.hit50, it.misses)
+        val accuracies = if (p.mode == GameMode.STANDARD) {
+            best.map {
+                getAcc(it.hit300, it.hit100, it.hit50, it.misses)
+            }
+        } else if (p.mode == GameMode.TAIKO){
+            best.map {
+                getTaikoAcc(it.gekis, it.katus, it.misses)
+            }
+        } else {
+            best.map {
+                channel.sendMessage("Only std/taiko supported atm sorry.").queue()
+                return
+            }
         }
 
         val user = best[0].user.get()

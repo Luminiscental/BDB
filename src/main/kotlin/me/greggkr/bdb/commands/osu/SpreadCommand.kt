@@ -1,6 +1,5 @@
 package me.greggkr.bdb.commands.osu
 
-import com.oopsjpeg.osu4j.GameMode
 import com.oopsjpeg.osu4j.backend.EndpointUserBests
 import me.diax.comportment.jdacommand.Command
 import me.diax.comportment.jdacommand.CommandDescription
@@ -9,6 +8,8 @@ import me.greggkr.bdb.osu
 import me.greggkr.bdb.osu.Osu
 import me.greggkr.bdb.ppFormat
 import me.greggkr.bdb.twoDecFormat
+import me.greggkr.bdb.util.Emoji
+import me.greggkr.bdb.util.argsFromString
 import net.dv8tion.jda.core.EmbedBuilder
 import net.dv8tion.jda.core.entities.Message
 import kotlin.math.sqrt
@@ -20,16 +21,21 @@ class SpreadCommand : Command {
     override fun execute(message: Message, args: String) {
         val guild = message.guild
         val channel = message.channel
-        val p = Osu.getUserArguments(message, args)
+        val p = Osu.getUserAndMode(message, argsFromString(args))
 
         val user = p.user ?: return
         val limit = Osu.getNumberArgument(p.params, 50, 10, 100)
 
         val best = osu.userBests.getAsQuery(EndpointUserBests.ArgumentsBuilder(user)
-                .setMode(p.mode.gamemode)
+                .setMode(p.mode)
                 .setLimit(limit)
                 .build())
                 .resolve()
+
+        if (best.isNullOrEmpty()) {
+            channel.sendMessage("${Emoji.X} Please provide a valid user; $user has no best plays in ${Osu.prettyMode(p.mode)}").queue()
+            return
+        }
 
         val sorted = best.asSequence().sortedByDescending { it.pp }.toList()
 

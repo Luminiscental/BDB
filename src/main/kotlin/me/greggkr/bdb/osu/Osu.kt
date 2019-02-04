@@ -8,8 +8,7 @@ import com.oopsjpeg.osu4j.OsuScore
 import me.greggkr.bdb.config
 import me.greggkr.bdb.data
 import me.greggkr.bdb.starFormat
-import me.greggkr.bdb.util.Config
-import me.greggkr.bdb.util.Emoji
+import me.greggkr.bdb.util.*
 import net.dv8tion.jda.core.entities.Game
 import net.dv8tion.jda.core.entities.Message
 import okhttp3.OkHttpClient
@@ -53,29 +52,10 @@ enum class OsuMod(val mod: String) {
     FL("FL")
 }
 
-enum class OsuMode(val modeArg: String, val prettyName: String, val gamemode: GameMode) {
-    STD("std", "osu!", GameMode.STANDARD),
-    TAIKO("taiko", "osu!taiko", GameMode.TAIKO),
-    MANIA("mania", "osu!mania", GameMode.MANIA),
-    CTB("ctb", "osu!ctb", GameMode.CATCH_THE_BEAT);
-
-    companion object {
-        fun fromArg(modeArg: String): OsuMode {
-            return values().last { it.modeArg == modeArg }
-        }
-        fun isMode(modeArg: String): Boolean {
-            return values().map { it.modeArg }.contains(modeArg)
-        }
-    }
-}
-
-data class OsuUserArguments(val user: String?,
-                            val mode: OsuMode,
-                            val params: List<String>
+data class OsuParams(val user: String?,
+                     val mode: GameMode,
+                     val params: List<String>
 )
-
-data class OsuGlobalArguments(val mode: OsuMode,
-                              val params: List<String>)
 
 class Osu {
     companion object {
@@ -93,7 +73,17 @@ class Osu {
             return rank.replace("X", "SS")
         }
 
-        fun prettyTime(score: OsuScore): String {
+        fun prettyMode(mode: GameMode): String {
+            return when(mode) {
+                GameMode.STANDARD -> "osu!"
+                GameMode.TAIKO -> "osu!taiko"
+                GameMode.MANIA -> "osu!mania"
+                GameMode.CATCH_THE_BEAT -> "osu!catch"
+                else -> ""
+            }
+        }
+
+        private fun prettyTime(score: OsuScore): String {
             val duration = Duration.between(score.date.toOffsetDateTime().toLocalDateTime(), LocalDateTime.now())
 
             val days = duration.toDays()
@@ -130,80 +120,48 @@ class Osu {
             return "${map.title} [${map.version}] $mods - ${starFormat.format(map.difficulty)}* ($timeInfo)"
         }
 
-        fun getUserArguments(message: Message, args: String): OsuUserArguments {
-            val a = args.split(Regex("\\s+\\|\\s+"))
+        fun getUserAndMode(message: Message, args: List<String>, requireUser: Boolean = true): OsuParams {
+            val params = mutableListOf<String>()
             val guild = message.guild
             val channel = message.channel
 
-            var specifiedUser = false
-            var user = ""
+            var user: String? = null
+            var mode: GameMode? = null
 
-            if (!a.isNullOrEmpty()) {
-                if (!a[0].isEmpty()) {
-                    if (a[0].contains("@") && !message.mentionedUsers.isEmpty()) {
-                        val mentionedUser = data.getOsuUser(guild, message.mentionedUsers[0])
-                        if (!mentionedUser.isNullOrEmpty()) {
-                            user = mentionedUser
-                            specifiedUser = true
-                        }
-                    }
-                    // If it's a number assume it's a parameter not a username
-                    if (!specifiedUser && !a[0].matches(Regex("\\d+")) && !OsuMode.isMode(a[0])) {
-                        user = a[0]
-                        specifiedUser = true
+            for (arg in args) {
+                // Interpreted as mode before user
+                // e.g. "profile taiko" gives your taiko profile rather than the profile for user taiko
+                // Also ordered, so "profile taiko taiko" gives the taiko profile for user taiko
+                if (mode == null) {
+                    val asMode = gameModeFromName(arg)
+                    if (asMode != null) {
+                        mode = asMode
+                        continue
                     }
                 }
-
-                if (user.isEmpty()) {
-                    val authorUser = data.getOsuUser(guild, message.author)
-                    if (!authorUser.isNullOrEmpty()) {
-                        user = authorUser
+                if (requireUser && user.isNullOrEmpty()) {
+                    val asUser = userFromString(message, arg)
+                    if (asUser != null) {
+                        user = asUser
+                        continue
                     }
+                }
+                params.add(arg)
+            }
+
+            if (user.isNullOrEmpty()) {
+                val authorUser = data.getOsuUser(guild, message.author)
+                if (!authorUser.isNullOrEmpty()) {
+                    user = authorUser
                 }
             }
 
-            if (user.isEmpty()) {
+            if (requireUser && user.isNullOrEmpty()) {
                 channel.sendMessage("${Emoji.X} You must supply a valid user. Either the person you mentioned or you do not have a linked user. Use ${data.getPrefix(guild)}user <username>.").queue()
             }
 
-            val p = if (specifiedUser) {
-                if (a.size < 2) listOf()
-                else a.subList(1, a.size)
-            } else {
-                a
-            }
-
-            val asGlobal = getGlobalArguments(p.joinToString(separator = "|"))
-
-            return OsuUserArguments(user, asGlobal.mode, asGlobal.params)
-        }
-
-        fun getGlobalArguments(args: String): OsuGlobalArguments {
-
-            val a = args.split(Regex("\\s+\\|\\s+"))
-
             // TODO: Per-user default mode
-            var mode = OsuMode.STD
-            var specifiedMode = false
-
-            if (!a.isNullOrEmpty()) {
-                if (!a[0].isEmpty()) {
-                    val modeArg = a[0]
-                    if (OsuMode.isMode(modeArg)) {
-                        specifiedMode = true
-                        mode = OsuMode.fromArg(modeArg)
-                    }
-                }
-            }
-
-            val p = if (specifiedMode) {
-                if (a.size < 2) listOf()
-                else a.subList(1, a.size)
-            } else {
-                a
-            }
-
-            return OsuGlobalArguments(mode, p)
+            return OsuParams(user, mode?: GameMode.STANDARD, params)
         }
 
         fun getNumberArgument(params: List<String>, default: Int, min: Int, max: Int, index: Int = 0): Int {
